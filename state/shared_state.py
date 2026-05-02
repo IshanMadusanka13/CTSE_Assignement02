@@ -88,3 +88,4 @@ class CodeReviewState(TypedDict, total=False):
     current_agent: str
     messages: List[Dict[str, Any]]
     errors: List[str]
+
