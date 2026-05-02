@@ -23,7 +23,7 @@ from rich.panel import Panel
 from agents import (
     code_analyzer_node,
     coordinator_node,
-    report_generator_node,
+    # report_generator_node,
     security_scanner_node,
 )
 from observability import logger
@@ -40,8 +40,8 @@ def build_graph() -> StateGraph:
     """
     Construct the LangGraph StateGraph for the Code Review MAS.
 
-    The graph follows a sequential pipeline:
-      START → coordinator → code_analyzer → security_scanner → report_generator → END
+        The graph follows a conditional pipeline:
+            START → coordinator → code_analyzer? → security_scanner? → END
 
     State is passed between nodes as a shared CodeReviewState TypedDict.
     Each node returns only the keys it modifies — LangGraph merges them.
@@ -55,14 +55,42 @@ def build_graph() -> StateGraph:
     graph.add_node("coordinator", coordinator_node)
     graph.add_node("code_analyzer", code_analyzer_node)
     graph.add_node("security_scanner", security_scanner_node)
-    graph.add_node("report_generator", report_generator_node)
+    # graph.add_node("report_generator", report_generator_node)
 
-    # Define the sequential pipeline
+    def route_after_coordinator(state: CodeReviewState) -> str:
+        assigned_agents = state.get("assigned_agents", [])
+        if "code_analyzer" in assigned_agents:
+            return "code_analyzer"
+        if "security_scanner" in assigned_agents:
+            return "security_scanner"
+        return "end"
+
+    def route_after_code_analyzer(state: CodeReviewState) -> str:
+        assigned_agents = state.get("assigned_agents", [])
+        if "security_scanner" in assigned_agents:
+            return "security_scanner"
+        return "end"
+
+    # Define the conditional pipeline
     graph.add_edge(START, "coordinator")
-    graph.add_edge("coordinator", "code_analyzer")
-    graph.add_edge("code_analyzer", "security_scanner")
-    graph.add_edge("security_scanner", "report_generator")
-    graph.add_edge("report_generator", END)
+    graph.add_conditional_edges(
+        "coordinator",
+        route_after_coordinator,
+        {
+            "code_analyzer": "code_analyzer",
+            "security_scanner": "security_scanner",
+            "end": END,
+        },
+    )
+    graph.add_conditional_edges(
+        "code_analyzer",
+        route_after_code_analyzer,
+        {
+            "security_scanner": "security_scanner",
+            "end": END,
+        },
+    )
+    graph.add_edge("security_scanner", END)
 
     return graph.compile()
 

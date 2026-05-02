@@ -34,7 +34,7 @@ logs/
 *.log
 
 # State / runtime output
-state/
+#state/
 
 # IDE
 .vscode/
