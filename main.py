@@ -41,7 +41,7 @@ def build_graph() -> StateGraph:
     graph.add_node("coordinator", coordinator_node)
     graph.add_node("code_analyzer", code_analyzer_node)
     graph.add_node("security_scanner", security_scanner_node)
-    # graph.add_node("report_generator", report_generator_node)
+    graph.add_node("report_generator", report_generator_node)
 
     # ─────────────────────────────────────────────
     # Routing logic
